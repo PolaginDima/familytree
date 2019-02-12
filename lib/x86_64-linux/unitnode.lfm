@@ -1,7 +1,7 @@
 object frmNode: TfrmNode
-  Left = 321
+  Left = 68
   Height = 490
-  Top = 141
+  Top = 150
   Width = 1076
   BorderIcons = [biSystemMenu]
   BorderStyle = bsDialog
@@ -20,9 +20,9 @@ object frmNode: TfrmNode
     Height = 490
     Top = 0
     Width = 1076
-    ActivePage = TabSheet1
+    ActivePage = TabSheet2
     Align = alClient
-    TabIndex = 0
+    TabIndex = 1
     TabOrder = 0
     object TabSheet1: TTabSheet
       Caption = 'Основное'
@@ -286,11 +286,11 @@ object frmNode: TfrmNode
             Top = 1
             Width = 366
             Align = alClient
+            Center = True
             OnDblClick = ImageFotoDblClick
             ParentShowHint = False
             Proportional = True
             ShowHint = True
-            Stretch = True
           end
         end
       end
@@ -466,6 +466,7 @@ object frmNode: TfrmNode
       Hint = 'Просмотр фото'
       ImageIndex = 9
       OnExecute = AShowExecute
+      ShortCut = 113
     end
   end
   object ImageList1: TImageList

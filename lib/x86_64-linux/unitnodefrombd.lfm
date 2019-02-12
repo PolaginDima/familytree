@@ -1,5 +1,5 @@
 object frmNodeFromBD: TfrmNodeFromBD
-  Left = 602
+  Left = 217
   Height = 296
   Top = 287
   Width = 927
@@ -10,7 +10,7 @@ object frmNodeFromBD: TfrmNodeFromBD
   ClientWidth = 927
   OnCreate = FormCreate
   Position = poMainFormCenter
-  LCLVersion = '1.8.2.0'
+  LCLVersion = '1.8.4.0'
   object StringGridPeople: TStringGrid
     Left = 0
     Height = 248

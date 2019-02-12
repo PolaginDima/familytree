@@ -9,7 +9,7 @@ uses
   Interfaces, // this includes the LCL widgetset
   Forms, datetimectrls, startmodule, workdb, mySQLite3Conn, SQLiteTable3,
   SQLite3, unitNode, CreateTree, UnitNodeFromBD, startpos, mygraph, Settings,
-  viewfoto;
+  viewfoto,getrectinselection;
 
 {$R *.res}
 

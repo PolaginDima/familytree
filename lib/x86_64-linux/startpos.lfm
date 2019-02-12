@@ -1,5 +1,5 @@
 object frmstartpos: Tfrmstartpos
-  Left = 459
+  Left = 250
   Height = 391
   Top = 226
   Width = 894
