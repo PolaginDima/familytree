@@ -20,3 +20,4 @@
 *.db3
 *.db3.bak
 *.db3.old
+!rod.db3.7z
