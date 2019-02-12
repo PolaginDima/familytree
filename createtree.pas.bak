@@ -1,0 +1,498 @@
+unit CreateTree;
+
+{$mode objfpc}{$H+}
+
+interface
+
+uses
+  Classes, SysUtils, Graphics, Forms, mylvlGraphTree, ExtCtrls, controls,
+  mysqlite3conn, sqldb, Menus, lazutf8, dialogs, workdb;
+ type
+   ESQLiteException = class(Exception)
+   end;
+
+   {
+   перенести всю работу с базой в модуль workdb
+   }
+      { TCreateTree }
+
+   TCreateTree=class(TScrollbox)
+   private
+       FflagDraw:boolean;
+       myTree:TMyTree;
+       Image:TImage;
+       FSQL_table:TSQLiteTable2;
+       Fobj:TCustomControl;
+       Fpath:string;
+       rod:TSQLite3Connection;
+       rodTrans:TSQLTransaction;
+       FMaxDepth:integer;
+       FMaxCountInLevel:integer;
+       PopupMenu1: TPopupMenu;
+       PopupMenu2: TPopupMenu;
+       function GetCaption: string;
+       function Getgetpeople(indexid: integer): Tpeople;
+       procedure GetPotomk(ID_Roditel:integer);overload;
+       procedure GetPotomk(Fam, Nam, Otch:string;sex:integer);overload ;
+       procedure createTBinmemory;
+       function GetMaxDepth:integer;
+       function GetMaxCountInLevel:integer;
+       procedure DrawTreeshow;
+       procedure MouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
+       procedure Resize(Sender: TObject);
+       procedure Click(Sender: TObject);
+       procedure SetCaption(AValue: string);
+       procedure MenuItemClick(Sender: TObject);
+       function addpeople(ppl: Tpeople;predok:boolean=false): boolean;
+       function savepeople(ppl: Tpeople;id:integer;predok:boolean=false): boolean;
+       function currpeople:Tpeople;
+       //function CreateGraphTree:Tbitmap;
+   protected
+   public
+       constructor Create({TOwner:TComponent ;}pathdb:string;frm:TCustomControl;pMenu:TPopupMenu;pMenu2:TPopupMenu);
+       destructor Destroy;override;
+       procedure DrawTree;
+       property CaptionTree:string read GetCaption write SetCaption;
+       property getpeople[indexid:integer]:Tpeople read Getgetpeople;
+   end;
+
+implementation
+uses unitNode;
+
+   { TCreateTree }
+
+
+procedure TCreateTree.GetPotomk(ID_Roditel: integer);
+var
+  SQL_query:string;
+  //SQL_table: TSQLiteTable2;
+begin
+  //Получим потомков и запишем во временную таблицу
+  SQL_query:='with recursive m(depth,id_people,id_parent) as ('+lineending+
+  'select 1,id_people,id_parent from parent where id_people='+inttostr(ID_Roditel)+lineending+
+  'union all'+lineending+
+  'select m.depth+1, t.id_people, t.id_parent from parent as t join m on (t.id_parent=m.id_people)'+lineending+
+  ')'+lineending+
+  'select m.depth as depth,p.id as pid,p.fam as pfam,p.nam as pnam,p.otch as potch,p.sex as psex, p.avatar as pfoto, '+lineending+
+  'p2.id as p2id,p2.fam as p2fam,p2.nam as p2nam,p2.otch as p2otch,p2.sex as p2sex from m join people as p on (m.id_people=p.id)'+lineending+
+  'left join people as p2 on (m.id_parent=p2.id)'+lineending+
+  'order by depth ASC, p2id'+lineending+
+  ''+lineending+
+  '';
+  //pid - id - человека
+  //p2id - id - родителя
+  //Заполним таблицу в памяти, предварительно очистив её
+  rod.ExecuteDirect('delete from treeMEM');
+  FSQL_table:=rod.GetTable(SQL_query);
+  if FSQL_table.Count<>0 then
+   begin
+     FSQL_table.First;
+     while not FSQL_table.EOF do
+       begin
+         if not FSQL_table.FieldIsNull('p2id') then
+          SQL_query:='(depth,idd,fam,nam,otch,sex,pid,pfam,pnam,potch,psex) VALUES('
+         else
+          SQL_query:='(depth,idd,fam,nam,otch,sex) VALUES(';
+         SQL_query:=SQL_query+FSQL_table.FieldAsString('depth')+','+
+         FSQL_table.FieldAsString('pid')+',"'+
+         FSQL_table.FieldAsString('pfam')+'","'+
+         FSQL_table.FieldAsString('pnam')+'","'+
+         FSQL_table.FieldAsString('potch')+'",'+
+         FSQL_table.FieldAsString('psex');
+         if not FSQL_table.FieldIsNull('p2id') then
+          begin
+            SQL_query:=SQL_query+','+FSQL_table.FieldAsString('p2id')+',"'+
+            FSQL_table.FieldAsString('p2fam')+'","'+
+            FSQL_table.FieldAsString('p2nam')+'","'+
+            FSQL_table.FieldAsString('p2otch')+'",'+
+            FSQL_table.FieldAsString('p2sex');
+          end;
+         SQL_query:=SQL_query+');';
+         rod.ExecuteDirect('insert into treeMEM  '+SQL_query);
+         //строим дерево
+          if FSQL_table.FieldIsNull('p2id') then
+           begin
+             myTree.addNode(FSQL_table.FieldAsInteger('pid')).Caption:=FSQL_table.FieldAsString('pfam')+' '+FSQL_table.FieldAsString('pnam')+lineending+
+             FSQL_table.FieldAsString('potch');
+           end
+           else
+           begin
+             myTree.addEdge(FSQL_table.FieldAsInteger('p2id'),FSQL_table.FieldAsInteger('pid'));
+             myTree.NodesIDNode[FSQL_table.FieldAsInteger('pid')].Caption:=FSQL_table.FieldAsString('pfam')+' '+FSQL_table.FieldAsString('pnam')+lineending+
+             FSQL_table.FieldAsString('potch');
+           end;
+         FSQL_table.Next;
+       end;
+   end;
+  GetMaxDepth;
+  GetMaxCountInLevel;
+  rod.Transaction.Commit;
+  //SQL_table.free;
+end;
+
+function TCreateTree.GetCaption: string;
+begin
+  result:=myTree.Caption;
+end;
+
+function TCreateTree.Getgetpeople(indexid: integer): Tpeople;
+var
+  flag:boolean;
+  jpg:TJpegImage;
+  ms:TMemoryStream;
+begin
+  if FSQL_table.Count<=0 then exit;
+  FSQL_table.First;
+  while not FSQL_table.EOF do
+    begin
+      flag:=false;
+      if FSQL_table.FieldAsInteger('pid')=indexid then break;
+      FSQL_table.Next;
+      flag:=true;
+    end;
+  if flag then exit;
+  result:=Tpeople.Create;
+  result.fam:=FSQL_table.FieldAsString('pfam');
+  result.nam:=FSQL_table.FieldAsString('pnam');
+  result.otch:=FSQL_table.FieldAsString('potch');
+  if not FSQL_table.FieldIsNull('pfoto') then
+   begin
+     jpg:=TJpegImage.Create;
+     ms:=TMemoryStream.Create;
+     ms:=FSQL_table.FieldAsBlob('pfoto');
+     ms.Seek(0, soBeginning);
+     //ms.SaveToFile('D:\ms.jpg');
+     jpg.LoadFromStream(ms);
+     jpg.SaveToFile('d:\1.jpg');
+     result.foto:=jpg;
+     ms.Free;
+     //jpg.Free;
+   end;
+end;
+
+procedure TCreateTree.GetPotomk(Fam, Nam, Otch: string; sex: integer);
+var
+  SQL_table: TSQLiteTable2;
+
+begin
+  SQL_table:=rod.GetTable('select ID from people where (Fam="'+Fam+'")and(Nam="'+
+  Nam+'")and(Otch="'+Otch+'")and(sex='+inttostr(sex)+')');
+  if SQL_table.Count=0 then exit;
+  SQL_table.First;
+  GetPotomk(SQL_table.FieldAsInteger('ID'));
+  SQL_table.Free;
+end;
+
+procedure TCreateTree.createTBinmemory;
+var
+  SQL_query:string;
+begin
+   // Создание временной таблицы treemem
+    SQL_query:='CREATE temp TABLE IF NOT EXISTS treeMEM '+lineending+
+    '([id] INTEGER primary key,'+lineending+
+    '[depth] integer NOT NULL,'+lineending+
+    '[idd] integer NOT NULL,'+lineending+
+    '[fam] text NOT NULL  COLLATE NOCASE,'+lineending+
+    '[nam] text NOT NULL  COLLATE NOCASE,'+lineending+
+    '[otch] text NOT NULL  COLLATE NOCASE,'+lineending+
+    '[sex] INTEGER NOT NULL,'+lineending+
+    '[avatar] BLOB,'+lineending+
+    '[pid] integer,'+lineending+
+    '[pfam] text COLLATE NOCASE,'+lineending+
+    '[pnam] text COLLATE NOCASE,'+lineending+
+    '[potch] text COLLATE NOCASE,'+lineending+
+    '[psex] INTEGER'+lineending+
+    '[avatar] BLOB'+lineending+
+    ');';
+  rod.ExecuteDirect(SQL_query);
+  rod.Transaction.Commit;
+end;
+
+function TCreateTree.GetMaxDepth: integer;
+var
+  SQL_query:string;
+  SQL_table: TSQLiteTable2;
+begin
+  result:=-1;
+  SQL_query:='select depth from treeMEM order by depth DESC limit 1';
+  SQL_table:=rod.GetTable(SQL_query);
+  if SQL_table.Count>0 then
+  begin
+    SQL_table.First;
+    result:=strtoint(SQL_table.FieldAsString('depth'));
+    showmessage('макс уровень='+inttostr(result));
+  end;
+end;
+
+function TCreateTree.GetMaxCountInLevel: integer;
+var
+  SQL_query:string;
+  SQL_table: TSQLiteTable2;
+begin
+  result:=-1;
+  SQL_query:='select depth, count(*) as maxnode from treeMEM  group by depth order by maxnode DESC limit 1';
+  SQL_table:=rod.GetTable(SQL_query);
+  if SQL_table.Count>0 then
+  begin
+    SQL_table.First;
+    result:=strtoint(SQL_table.FieldAsString('maxnode'));
+    showmessage('макс кол-во элеиентов на уровне='+inttostr(result));
+  end;
+end;
+
+procedure TCreateTree.DrawTreeshow;
+begin
+  Image.Picture.Bitmap.Assign(myTree);
+end;
+
+constructor TCreateTree.Create(pathdb: string; frm: TCustomControl;
+  pMenu: TPopupMenu; pMenu2: TPopupMenu);
+begin
+  inherited create(frm);
+  self.FflagDraw:=false;
+  PopupMenu1:=TPopupMenu.Create(self);
+  /////////////
+  PopupMenu1.Items.Add(TMenuItem.Create(PopupMenu1));
+  PopupMenu1.Items.Items[0].Caption:='добавить потомка';
+  PopupMenu1.Items.Items[0].Name:='addchild';
+  PopupMenu1.Items.Items[0].OnClick:=@self.MenuItemClick;
+  PopupMenu1.Items.Add(TMenuItem.Create(PopupMenu1));
+  PopupMenu1.Items.Items[1].Caption:='редактировать потомка';
+  PopupMenu1.Items.Items[1].Name:='editchild';
+  PopupMenu1.Items.Items[1].OnClick:=@self.MenuItemClick;
+  /////////////
+
+  PopupMenu2:=TPopupMenu.Create(self);
+  /////////////
+  PopupMenu2.Items.Add(TMenuItem.Create(PopupMenu2));
+  PopupMenu2.Items.Items[0].Caption:='предок для нового дерева';
+  PopupMenu2.Items.Items[0].Name:='newTree';
+  PopupMenu2.Items.Items[0].OnClick:=@self.MenuItemClick;
+  /////////////
+
+  myTree:=TmyTree.Create;
+  Image:=TImage.Create(self);
+  Image.Parent:=self;
+  image.Align:=alClient;
+  image.AutoSize:=true;
+  image.OnMouseMove:=@MouseMove;
+  self.OnResize:=@Resize;
+  Image.OnClick:=@self.Click;
+  //опции по умолчанию изменим
+  //self.Options:=self.Options+[lgoHighLevels];
+  if not fileexists(pathdb) then
+   begin
+     raise ESqliteException.Create('Отсутствует БД '+pathdb);
+     self.Free;
+     exit;
+   end;
+   Fobj:=frm;
+   Fpath:=pathdb;
+   // Подключение к БД
+  try
+    //Создадим объект подключения
+    rod:=TSQLite3Connection.Create(nil);
+    rodtrans:=TSQLTransaction.Create(nil); //объект транзакции
+    rod.Transaction:=rodtrans;
+    //настроим  параметры подключения к базе
+    rod.DatabaseName:=Fpath;//'rod.db3';
+    rod.Params.Add('foreign_keys=ON');  //контроль целостности базы
+    rod.Params.Add('journal_mode=OFF'); //отключим журналирование - опасно при отключении ппитания
+    rod.Params.Add('synchronous=off');  //отключим синхронизацию транзакций - опасно при отключении ппитания
+    //Создадим пустую базу
+    //rod.CreateDB;
+    rod.Open;
+    //Присоединим базу в памяти
+    rod.createtableinmemory('tree');
+    //создадим в базе в памяти необходимые таблицы
+    createTBinmemory;
+    //Создадим объект транзакция
+    //rodTrans:=TSQLTransaction.Create(nil);
+    //подключим транзакцию
+    //rod.Transaction:=rodTrans;
+  except
+               on E: Exception do
+               begin
+                 raise ESqliteException.Create(E.Message);
+               end;
+  end;
+  GetPotomk('Палагин','Алексей','UNKNOWN',0);//это временно для тестирования
+end;
+
+destructor TCreateTree.Destroy;
+begin
+  rod.Close;
+  rodtrans.Free;
+  rod.Free;
+  myTree.Free;
+  FSQL_table.Free;
+  inherited Destroy;
+end;
+
+procedure TCreateTree.DrawTree;
+begin
+  myTree.DrawTree;
+  myTree.resizeTree(Image.width,Image.height);
+  DrawTreeshow;
+  self.FflagDraw:=true;
+end;
+
+procedure TCreateTree.MouseMove(Sender: TObject; Shift: TShiftState; X,
+  Y: Integer);
+begin
+  if myTree.mouseMove(x,y) then Image.Picture.Bitmap.Assign(myTree);
+end;
+
+procedure TCreateTree.Resize(Sender: TObject);
+begin
+  if self.FflagDraw then
+   begin
+     myTree.resizeTree(Width,height);
+     self.DrawTreeshow;
+   end;
+end;
+
+procedure TCreateTree.Click(Sender: TObject);
+begin
+  if trselnode in myTree.SostTree then PopupMenu1.PopUp else PopupMenu2.PopUp;
+end;
+
+procedure TCreateTree.SetCaption(AValue: string);
+begin
+  if avalue=myTree.Caption then exit;
+  myTree.Caption:=aValue;
+end;
+
+procedure TCreateTree.MenuItemClick(Sender: TObject);
+var
+  potomok:Tpeople;
+begin
+   case TMenuItem(Sender).Name of
+       'newTree':
+                 begin
+                      showmessage('новый предок');
+                 end;
+       'addchild':
+                 begin
+                    //Откроем окно ввода нового листа дерева
+                    //Создадим экземпляр окна
+                    frmNode:=TfrmNode.Create(self);
+                    //Настроим окно ввода нового листа
+                    frmNode.new:=true;//признак того что новый лист
+                    frmNode.Predok:=myTree.GetSelNodeIndex;//указываем предка, т.е. это потомок
+                    //Выведем на экран
+                    if frmNode.ShowModal=mrok then
+                     begin
+                       //Прочитаем/проанадизируем введенные данные
+                       //potomok:=frmNode.People;
+                       if frmNode.People<>nil then
+                        begin
+                          //Если все верно, то добавим потомка к дереву
+                          addpeople(frmNode.People);
+                          //potomok.Free;
+                        end;
+                     end;
+                    if frmNode<>nil then  frmNode.Free;
+                   {showmessage('новый потомок'+lineending+'fam'+lineending+'name'+lineending+'муж');
+                   potomok:=Tpeople.Create;
+                   potomok.fam:='fam';
+                   potomok.nam:='name';
+                   potomok.sex:=0;
+                   potomok.predok:=myTree.GetSelNodeIndex;
+                   addpeople(potomok);}
+                   //уничтожем экземпляр
+                 end;
+       'editchild':
+                 begin
+                    //Откроем окно редактирования листа дерева
+                    //Создадим экземпляр окна
+                    frmNode:=TfrmNode.Create(self);
+                    //Настроим окно редактирования листа
+                    frmNode.new:=false;//признак того что не новый лист
+                    //Получим people для передачи для редактирования
+                    frmNode.People:=getpeople[myTree.GetSelNodeIndex];
+                    //frmNode.Predok:=myTree.GetSelNodeIndex;//указываем предка, т.е. это потомок
+                    //Выведем на экран
+                    if frmNode.ShowModal=mrok then
+                     begin
+                       //Прочитаем/проанадизируем введенные данные
+                       //potomok:=frmNode.People;
+                       //Если есть изменения, то запишем их
+                       if (frmNode.People<>nil) and
+                       (frmNode.IsModified)then
+                        begin
+                          //Если есть изменения, то запишем их
+                          savepeople(frmNode.People,myTree.GetSelNodeIndex);
+                          //potomok.Free;
+                        end;
+                     end;
+                    if frmNode<>nil then frmNode.Free;
+                 end;
+  end;
+end;
+
+function TCreateTree.addpeople(ppl: Tpeople; predok: boolean): boolean;
+var
+  id:integer;
+  ms:Tmemorystream;
+begin
+  //Добавим человека в основную таблицу
+  rod.ExecuteDirect('INSERT INTO people (fam,nam,sex) VALUES ("'+ppl.fam+'","'+ppl.nam+'",'+inttostr(ppl.sex)+');');
+  //добавим, если есть фото(аватар)
+  //получим id последней вставленной записи
+  id:=rod.SQLiteDatabase.GetLastInsertRowID;
+  //добавим фотку
+  if ppl.fotoIsModified then
+   begin
+     ms:=Tmemorystream.Create;
+     ppl.foto.SaveToStream(ms);
+     rod.SQLiteDatabase.UpdateBlob('UPDATE people SET avatar = ? WHERE id = '+inttostr(id),ms);
+  end;
+  //Добавим в таблицу предков
+  if ppl.predok=-1 then
+  rod.ExecuteDirect('INSERT INTO parent (id_people,id_parent) VALUES ('+inttostr(rod.GetInsertID)+',null);')
+  else
+   rod.ExecuteDirect('INSERT INTO parent (id_people,id_parent) VALUES ('+inttostr(rod.GetInsertID)+','+inttostr(ppl.predok)+');');
+  //Сохраним изменения
+  rod.Transaction.Commit;
+  //перечитаем базу
+  GetPotomk('Палагин','Алексей','UNKNOWN',0);
+  //Выведем на экран
+  self.DrawTree;
+  ms.Free;
+  result:=true;
+end;
+
+function TCreateTree.savepeople(ppl: Tpeople; id: integer; predok: boolean
+  ): boolean;
+var
+  ms:Tmemorystream;
+begin
+  //Добавим человека в основную таблицу
+  rod.ExecuteDirect('UPDATE people SET fam = "'+ppl.fam+'",SET nam ="'+ppl.nam+'" , SET sex = "'+inttostr(ppl.sex)+'" WHERE id = '+inttostr(id)+' ;');
+  //добавим, если есть фото(аватар)
+  //обновим фотку, если нужно
+  if ppl.fotoIsModified then
+  begin
+       ms:=Tmemorystream.Create;
+       ppl.foto.SaveToStream(ms);
+       rod.SQLiteDatabase.UpdateBlob('UPDATE people SET avatar = ? WHERE id = '+inttostr(id),ms);
+  end;
+  //Сохраним изменения
+  rod.Transaction.Commit;
+  //перечитаем базу
+  GetPotomk('Палагин','Алексей','UNKNOWN',0);
+  //Выведем на экран
+  self.DrawTree;
+  ms.Free;
+  result:=true;
+end;
+
+function TCreateTree.currpeople: Tpeople;
+begin
+
+end;
+
+{ Tworkdb }
+end.
+

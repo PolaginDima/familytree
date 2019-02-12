@@ -1,0 +1,19 @@
+# Lazarus
+*.exe
+#*.dll
+#*.lib
+#*.so
+*.a
+*.o
+*.or
+*.ppu
+*.jpg
+*.zip
+*.db
+*.bmp
+*.txt
+*.7z
+*.ini
+*.bat
+*.dbg
+*.ico

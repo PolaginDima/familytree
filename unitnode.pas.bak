@@ -1,0 +1,210 @@
+unit unitNode;
+
+{$mode objfpc}{$H+}
+
+interface
+
+uses
+  Classes, SysUtils, sqlite3conn, sqldb, db, FileUtil, Forms, Controls,
+  Graphics, Dialogs, StdCtrls, Buttons, DbCtrls, ExtCtrls, lazutf8,CreateTree, workdb;
+
+type
+
+  { TfrmNode }
+{  Tpeople=record
+    Fam:string;
+    Nam:string;
+    Otch:string;
+    sex:byte;
+    predok:integer;
+  end;}
+  //TActionP=(new)
+
+  TfrmNode = class(TForm)
+    BitBtn1: TBitBtn;
+    BitBtn2: TBitBtn;
+    EditFam: TEdit;
+    EditNam: TEdit;
+    EditOtch: TEdit;
+    GroupBox1: TGroupBox;
+    ImageFoto: TImage;
+    Memodopinfo: TMemo;
+    Panel1: TPanel;
+    RadioButtonMen: TRadioButton;
+    RadioButtonWomen: TRadioButton;
+    procedure BitBtn1Click(Sender: TObject);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
+    procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+    procedure FormShow(Sender: TObject);
+    procedure ImageFotoDblClick(Sender: TObject);
+  private
+    Fexit:boolean;
+    FPicIsModified:boolean;
+    FIsModified:boolean;
+    FIDPeople: integer;
+    Fnew: boolean;
+    FPredok: integer;
+    FPotomok:TPeople;
+    function GetIDPeople: integer;
+    function GetIsModified: boolean;
+    procedure Setnew(AValue: boolean);
+    procedure SetPredok(AValue: integer);
+    { private declarations }
+  public
+    { public declarations }
+    //property people:Tpeople read Fpeople write Fpeople;
+    property IDPeople:integer read GetIDPeople write FIDPeople default -1;
+    property new:boolean read Fnew write Setnew default false;
+    property Predok:integer read FPredok write SetPredok default -1;
+    property People:TPeople read FPotomok write FPotomok;
+    property IsModified:boolean read FIsModified;
+  end;
+
+var
+  frmNode: TfrmNode;
+
+implementation
+ //uses workdb;
+{$R *.lfm}
+
+{ TfrmNode }
+
+procedure TfrmNode.FormCreate(Sender: TObject);
+begin
+  Fexit:=true;
+  FIsModified:=false;
+  FPicIsModified:=false;
+end;
+
+procedure TfrmNode.FormDestroy(Sender: TObject);
+begin
+  if FPotomok<>nil then FPotomok.Free;
+end;
+
+procedure TfrmNode.FormShow(Sender: TObject);
+begin
+  if not new then
+  begin
+       EditFam.Text:=people.fam;
+       EditNam.Text:=people.nam;
+       //Если есть фото, то выведем на экран
+       if people.foto<>nil then ImageFoto.Picture.Jpeg.Assign(people.foto);
+  end;
+  //ImageFoto.Picture.LoadFromFile('C:\Users\065PolaginDA\Pictures\Безымянный.jpg');
+end;
+
+procedure TfrmNode.ImageFotoDblClick(Sender: TObject);
+var
+  od:topendialog;
+  //fname:string;
+  //bmp:TBitMap;
+  jpg:TJpegImage;
+  pct:TPicture;
+  //r:TRect;
+begin
+  //окно выбора фото
+  od:=topendialog.Create(self.Owner);
+  od.Filter:='изображение|*.jpg;*.gif;*.jpeg;*.bmp;*.png';
+  if not  od.Execute then exit;
+  //fname:=ExtractFileName(od.FileName);
+  //загрузим выбранное фото
+  pct:=TPicture.Create;
+  pct.LoadFromFile(od.FileName);
+  {bmp:=TBitMap.Create;
+  //зададим размеры
+  if pct.Graphic.Width>1200 then
+  begin
+    bmp.Width:=1200;
+    bmp.Height:=round(1200*(pct.Graphic.Height/pct.Graphic.Width));
+  end else
+  begin
+    bmp.Width:=pct.Graphic.Width;
+    bmp.Height:=pct.Graphic.Height;
+  end;
+  //сожмем
+  bmp.Canvas.StretchDraw(rect(0,0,bmp.Width,bmp.Height),pct.Graphic);
+  //отобразим
+  ImageFoto.Picture.Bitmap.Assign(bmp); }
+
+  //преобразуем и сожмем выбранное фото
+  jpg:=TJpegImage.Create;
+  if pct.Graphic.Width>1200 then
+  begin
+       jpg.Width:=1200;
+       jpg.Height:=round(1200*(pct.Height/pct.Graphic.Width));
+  end else
+  begin
+     jpg.Width:=pct.Graphic.Width;
+     jpg.Height:=pct.Graphic.Height;
+  end;
+  jpg.CompressionQuality:=100;
+  jpg.Canvas.StretchDraw(rect(0,0,jpg.Width,jpg.Height),pct.Graphic);
+  //сохраним в нужное место сжатое фото
+  //jpg.SaveToFile('???');
+  ImageFoto.Picture.Jpeg.Assign(jpg);
+  FPicIsModified:=true;
+end;
+
+procedure TfrmNode.BitBtn1Click(Sender: TObject);
+begin
+  //Проверим на корректность введенные данные и сохраним
+  {if (utf8length(EditFam.Text)<2)or(utf8length(EditNam.Text)<3)then
+  begin
+    //Выводим сообщение и устанавливаем флаг запрещающий закрытие окна
+    showmessage('ошибка ФИО');
+    Fexit:=false;
+  end;    }
+  GetIsModified; //Были ли изменения
+  if (not FIsModified)and(not new) then exit; //Если редиктирование и ничего не менялось, то выход
+  //сохраняем
+  if FPotomok=nil then FPotomok:=TPeople.Create;
+  try
+                 FPotomok.fam:=EditFam.Text;
+                 FPotomok.nam:=EditNam.Text;
+                 FPotomok.otch:=EditOtch.Text;
+                 FPotomok.sex:=integer(not RadioButtonMen.Checked);
+                 FPotomok.predok:=Predok;
+                 FPotomok.foto:=ImageFoto.Picture.Jpeg;
+                 FPotomok.dopinfo:=Memodopinfo.Text;
+  except
+    on E: Exception do
+               begin
+                 //Выводим сообщение и устанавливаем флаг запрещающий закрытие окна
+                 messagedlg('ошибка создания',E.Message,mtError,[mbOK],0);
+                 Fexit:=false;
+               end;
+  end;
+end;
+
+procedure TfrmNode.FormCloseQuery(Sender: TObject; var CanClose: boolean);
+begin
+  CanClose:=Fexit;
+  fexit:=true;
+end;
+
+function TfrmNode.GetIDPeople: integer;
+begin
+
+end;
+
+function TfrmNode.GetIsModified: boolean;
+begin
+  FIsModified:=(FPicIsModified)or(People.fam<>EditFam.Text)or(People.nam<>EditNam.Text)or(people.otch<>EditOtch.Text)or
+  (people.dopinfo<>Memodopinfo.Text)<>(people.sex<>integer(not RadioButtonMen.Checked));
+end;
+
+procedure TfrmNode.Setnew(AValue: boolean);
+begin
+  if Fnew=AValue then Exit;
+  Fnew:=AValue;
+end;
+
+procedure TfrmNode.SetPredok(AValue: integer);
+begin
+  if FPredok=AValue then Exit;
+  FPredok:=AValue;
+end;
+
+end.
+

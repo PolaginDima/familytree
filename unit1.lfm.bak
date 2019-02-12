@@ -1,0 +1,94 @@
+object Form1: TForm1
+  Left = 397
+  Height = 786
+  Top = 80
+  Width = 1074
+  Caption = 'Form1'
+  ClientHeight = 786
+  ClientWidth = 1074
+  OnCreate = FormCreate
+  LCLVersion = '1.6.0.4'
+  object Panel1: TPanel
+    Left = 0
+    Height = 46
+    Top = 740
+    Width = 1074
+    Align = alBottom
+    Caption = 'Panel1'
+    ClientHeight = 46
+    ClientWidth = 1074
+    TabOrder = 0
+    object Button5: TButton
+      Left = 504
+      Height = 29
+      Top = 8
+      Width = 132
+      Caption = 'Button5'
+      OnClick = Button5Click
+      TabOrder = 0
+    end
+    object Button3: TButton
+      Left = 296
+      Height = 55
+      Top = 0
+      Width = 104
+      Caption = 'Button3'
+      OnClick = Button3Click
+      TabOrder = 1
+    end
+    object Button2: TButton
+      Left = 88
+      Height = 42
+      Top = 4
+      Width = 98
+      Caption = 'Button2'
+      OnClick = Button2Click
+      TabOrder = 2
+    end
+    object Button1: TButton
+      Left = 720
+      Height = 27
+      Top = 7
+      Width = 177
+      Caption = 'Button1'
+      TabOrder = 3
+    end
+    object Button4: TButton
+      Left = 904
+      Height = 42
+      Top = 4
+      Width = 129
+      Caption = 'Button4'
+      TabOrder = 4
+    end
+  end
+  object PopupMenu1: TPopupMenu
+    left = 48
+    top = 448
+    object MenuItem1: TMenuItem
+      Caption = 'смотреть'
+    end
+    object MenuItem5: TMenuItem
+    end
+    object MenuItem2: TMenuItem
+      Caption = 'добавить потомка'
+      OnClick = MenuItem2Click
+    end
+    object MenuItem6: TMenuItem
+      Caption = 'добавить предка'
+    end
+    object MenuItem7: TMenuItem
+    end
+    object MenuItem4: TMenuItem
+      Caption = 'удалить'
+    end
+  end
+  object PopupMenu2: TPopupMenu
+    left = 176
+    top = 440
+    object MenuItem8: TMenuItem
+      Caption = 'предок для нового дерева'
+      OnClick = MenuItem8Click
+    end
+  end
+end

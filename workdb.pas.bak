@@ -1,0 +1,466 @@
+unit workdb;
+
+{$mode objfpc}{$H+}
+
+interface
+
+uses
+  Classes, SysUtils, Graphics, mysqlite3conn, sqldb, lazutf8;
+
+{,mysqlite3conn,sqldb{,LvlGraphTree}, controls,
+  dialogs, myLvlGraphTree,ExtCtrls,Graphics,Forms,Menus, lazutf8;  }
+type
+
+        { Tpeople }
+
+   Tpeople=class
+    private
+      Fdopinfo: string;
+      Ffam: string;
+      Ffoto: TJpegImage;
+      FfotoIsModified: boolean;
+      Fnam: string;
+      Fotch: string;
+      Fpredok: integer;
+      Fsex: byte;
+      procedure Setdopinfo(AValue: string);
+      procedure Setfam(AValue: string);
+      procedure Setfoto(AValue: TJpegImage);
+      procedure Setnam(AValue: string);
+    protected
+    public
+    constructor Create;
+     property fam:string read Ffam write Setfam;
+     property nam:string read Fnam write Setnam;
+     property otch:string read Fotch write Fotch;
+     property sex:byte read Fsex write Fsex default  0;
+     property predok:integer read Fpredok write Fpredok default -1;
+     property foto:TJpegImage read Ffoto write Setfoto;
+     property dopinfo:string read Fdopinfo write Setdopinfo;
+     property fotoIsModified:boolean read FfotoIsModified;
+   end;
+
+  { Tworkdb }
+
+   Tworkdb=class
+      private
+       Fpath:string;
+       //Fpeople:Tpeople;
+       FSQL_table:TSQLiteTable2;
+       rod:TSQLite3Connection;
+       rodTrans:TSQLTransaction;
+       function connectdb:boolean;
+       procedure createstructdb;
+       procedure CheckVerAndUpdate;
+       function GetFieldAsBlob(nameField: string): TMemoryStream;
+       function GetFieldAsDataTime(nameField: string): TdateTime;
+       function GetFieldAsInteger(nameField: string): integer;
+       function GetFieldAsReal(nameField: string): double;
+       function GetFieldAsString(nameField: string): string;
+       function GetFieldIsNull(nameField: string): boolean;
+       function GetRowCount: Cardinal;
+       procedure temp;//Временная процедура для начального заполнения таблиц
+       const version=1000003;
+      protected
+      public
+       constructor Create(pathdb:string);
+       destructor Destroy;override;
+       function GetPotomok(const ID_Roditel: integer):boolean;
+       function GetPeople_min(id:integer):TPeople;
+       function getparametrbase:string;
+       property FieldIsNull[nameField:string]:boolean read GetFieldIsNull;
+       property FieldAsString[nameField:string]:string read GetFieldAsString;
+       property FieldAsInteger[nameField:string]:integer read GetFieldAsInteger;
+       property FieldAsReal[nameField:string]:double read GetFieldAsReal;
+       property FieldAsBlob[nameField:string]:TMemoryStream read GetFieldAsBlob;
+       property FieldAsDataTime[nameField:string]:TdateTime read GetFieldAsDataTime;
+       property RowCount:Cardinal read GetRowCount;
+   end;
+
+implementation
+
+ { Tpeople }
+
+procedure Tpeople.Setfam(AValue: string);
+begin
+  if Ffam=AValue then Exit;
+  if UTF8Length(AValue)<2 then raise Exception.Create('Фамилия должна быть не менее 2-х символов');
+  Ffam:=AValue;
+end;
+
+procedure Tpeople.Setdopinfo(AValue: string);
+begin
+  if Fdopinfo=AValue then Exit;
+  Fdopinfo:=AValue;
+end;
+
+procedure Tpeople.Setfoto(AValue: TJpegImage);
+begin
+  if Ffoto=AValue then Exit;
+  Ffoto:=AValue;
+  FfotoIsModified:=true;
+end;
+
+procedure Tpeople.Setnam(AValue: string);
+begin
+  if Fnam=AValue then Exit;
+  if UTF8Length(AValue)<2 then raise Exception.Create('Имя должно быть не менее 3-х символов');
+  Fnam:=AValue;
+end;
+
+constructor Tpeople.Create;
+begin
+  inherited Create;
+  FfotoIsModified:=false;
+end;
+
+function Tworkdb.connectdb: boolean;
+begin
+  // Подключение к БД
+  try
+    //Создадим объект подключения
+    rod:=TSQLite3Connection.Create(nil);
+    //настроим  параметры подключения к базе
+    rod.DatabaseName:=Fpath;//'rod.db3';
+    rod.Params.Add('foreign_keys=ON');
+    rod.Params.Add('journal_mode=DELETE');
+    rod.Params.Add('synchronous=full');
+    rod.Params.Add('auto_vacuum=full');
+    //Создадим пустую базу
+    //rod.CreateDB;
+    rod.Open;
+    //rod.Synchronised:=syncfull;
+    //rod.Auto_Vacuum:=avacuumfull;
+    //rod.Journal_mode:=jmodeDelete;
+    //rod.Journal_mode:=jmodeoff;
+    //Создадим объект транзакция
+    rodTrans:=TSQLTransaction.Create(nil);
+    //подключим транзакцию
+    rod.Transaction:=rodTrans;
+    result:=true;
+  except
+               on E: Exception do
+               begin
+                 result:=false;
+               end;
+  end;
+end;
+
+procedure Tworkdb.createstructdb;
+var
+  SQL_query:string;
+begin
+  // Создание таблицы version
+    SQL_query:='CREATE TABLE IF NOT EXISTS [version] '+lineending+
+    '([id] INTEGER primary key,'+lineending+
+    '[name] text NOT NULL COLLATE NOCASE,'+lineending+
+    '[value] INTEGER NOT NULL'+lineending+
+    ''+lineending+
+    ''+lineending+
+    ''+lineending+
+    ');';
+    rod.ExecuteDirect(SQL_query);
+    rod.ExecuteDirect('create unique index  ind_version_name on version(name) ;');
+   // Создание таблицы people
+    SQL_query:='CREATE TABLE IF NOT EXISTS [people] '+lineending+
+    '([id] INTEGER primary key,'+lineending+
+    '[fam] text NOT NULL COLLATE NOCASE,'+lineending+
+    '[nam] text NOT NULL COLLATE NOCASE'+lineending+
+    //'[nam] text NOT NULL COLLATE NOCASE DEFAULT ''UNKNOWN'''+lineending+
+    ');';
+    rod.ExecuteDirect(SQL_query);
+    rod.ExecuteDirect('create unique index  ind_people_f_n on people(fam,nam) ;');
+     // Создание таблицы parent
+    SQL_query:='CREATE TABLE IF NOT EXISTS [parent] '+lineending+
+    '([id] INTEGER primary key,'+lineending+
+    '[id_people] INTEGER NOT NULL,'+lineending+
+    '[id_parent] INTEGER ,'+lineending+
+    ' FOREIGN KEY(id_people) REFERENCES people(id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED,'+lineending+
+    ' FOREIGN KEY(id_parent)REFERENCES people(id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED'+lineending+
+    ');';
+    rod.ExecuteDirect(SQL_query);
+    rod.ExecuteDirect('create unique index  ind_parent_idp_idp on parent(id_people,id_parent) ;');
+    //Вставим номер версии базы
+     rod.ExecuteDirect('INSERT INTO version (name,value) VALUES ("ver",1000000);');
+   //Применим изменения
+   rod.Transaction.Commit;
+end;
+
+procedure Tworkdb.CheckVerAndUpdate;
+var
+  Query:TSQLQuery;
+  SQL_query:string;
+  ver:integer;
+begin
+  Query:=TSQLQuery.create(nil);
+  Query.DataBase:=rod;
+  Query.Transaction:=rod.Transaction;
+  Query.SQL.Clear;
+  Query.SQL.Add('SELECT value FROM version WHERE name="ver"');
+  Query.Open;
+  if Query.IsEmpty then
+   begin
+     ver:=1000001;
+   end else
+   begin
+     Query.First;
+     ver:=Query.FieldByName('value').AsInteger;
+   end;
+   Query.Close;
+   Query.Free;
+   //Обновление до 1.0.0.3
+  if  (ver<version) then
+   begin
+     //добавим поле отчество
+     SQL_query:='ALTER TABLE [people] add column [otch] text COLLATE NOCASE DEFAULT "UNKNOWN";';
+     rod.ExecuteDirect(SQL_query);
+     SQL_query:='ALTER TABLE [people] add column [sex] integer NOT NULL DEFAULT 0;';
+     rod.ExecuteDirect(SQL_query);
+     SQL_query:='ALTER TABLE [people] add column [famfirst] text COLLATE NOCASE;';
+     rod.ExecuteDirect(SQL_query);
+     SQL_query:='ALTER TABLE [people] add column [avatar] BLOB;';
+     rod.ExecuteDirect(SQL_query);
+     SQL_query:='ALTER TABLE [people] add column [dopinfo] text COLLATE NOCASE;';
+     rod.ExecuteDirect(SQL_query);
+     //Удалим старый индекс и создадим новый
+     SQL_query:='drop index ind_people_f_n;';
+     rod.ExecuteDirect(SQL_query);
+     SQL_query:='create unique index  ind_people_f_n_o on people(fam,nam,otch) ;';
+     rod.ExecuteDirect(SQL_query);
+     //Запишем номер версии
+     SQL_query:='UPDATE version set value=1000003 where name="ver";';
+     rod.ExecuteDirect(SQL_query);
+     {SQL_db.BeginTransaction;
+     SQL_db.ExecSQL(SQL_query);
+     SQL_db.Commit;}
+     rod.Transaction.Commit;
+
+     temp;
+
+   end;
+end;
+
+function Tworkdb.GetFieldAsBlob(nameField: string): TMemoryStream;
+begin
+  if (FSQL_table=nil)or(FSQL_table.Count<=0) then raise Exception.Create('row count 0');
+  result:=FSQL_table.FieldAsBlob(nameField);
+end;
+
+function Tworkdb.GetFieldAsDataTime(nameField: string): TdateTime;
+begin
+  if (FSQL_table=nil)or(FSQL_table.Count<=0) then raise Exception.Create('row count 0');
+  result:=FSQL_table.FieldAsDateTime(nameField);
+end;
+
+function Tworkdb.GetFieldAsInteger(nameField: string): integer;
+begin
+  if (FSQL_table=nil)or(FSQL_table.Count<=0) then raise Exception.Create('row count 0');
+  result:=FSQL_table.FieldAsInteger(nameField);
+end;
+
+function Tworkdb.GetFieldAsReal(nameField: string): double;
+begin
+  if (FSQL_table=nil)or(FSQL_table.Count<=0) then raise Exception.Create('row count 0');
+  result:=FSQL_table.FieldAsDouble(nameField);
+end;
+
+function Tworkdb.GetFieldAsString(nameField: string): string;
+begin
+  if (FSQL_table=nil)or(FSQL_table.Count<=0) then raise Exception.Create('row count 0');
+  result:=FSQL_table.FieldAsString(nameField);
+end;
+
+function Tworkdb.GetFieldIsNull(nameField: string): boolean;
+begin
+  if (FSQL_table=nil)or(FSQL_table.Count<=0) then raise Exception.Create('row count 0');
+  result:=self.FSQL_table.FieldIsNull(nameField);
+end;
+
+function Tworkdb.GetRowCount: Cardinal;
+begin
+  result:=FSQL_table.Count;
+end;
+
+procedure Tworkdb.temp;
+begin
+  //Заполним для тестирования таблицы
+  rod.ExecuteDirect('INSERT INTO people (fam,nam) VALUES ("Палагин","Алексей");');
+  rod.ExecuteDirect('INSERT INTO people (fam,nam,sex) VALUES ("Палагина","Мария",1);');
+  rod.ExecuteDirect('INSERT INTO people (fam,nam) VALUES ("Полагин","Александр");');
+  rod.ExecuteDirect('INSERT INTO people (fam,nam,sex) VALUES ("Полагин","Елена",1);');
+  rod.ExecuteDirect('INSERT INTO people (fam,nam,sex) VALUES ("Полагина","Татьяна",1);');
+  rod.ExecuteDirect('INSERT INTO people (fam,nam) VALUES ("Полагин","Дмитрий");');
+  rod.ExecuteDirect('INSERT INTO people (fam,nam,otch,sex) VALUES ("Полагина","Татьяна","Александровна",1);');
+  rod.ExecuteDirect('INSERT INTO people (fam,nam) VALUES ("Полагин","Максим");');
+  rod.ExecuteDirect('INSERT INTO people (fam,nam,sex) VALUES ("Полагина","Екатерина",1);');
+  rod.ExecuteDirect('INSERT INTO people (fam,nam) VALUES ("Полагин","Ольга");');
+  rod.ExecuteDirect('INSERT INTO people (fam,nam) VALUES ("Полагин","Николай");');
+  rod.ExecuteDirect('INSERT INTO people (fam,nam) VALUES ("Полагина","Мария");');
+
+  //таблица связей
+  rod.ExecuteDirect('INSERT INTO parent (id_people,id_parent) VALUES (1,null);');
+  rod.ExecuteDirect('INSERT INTO parent (id_people,id_parent) VALUES (2,null);');
+  rod.ExecuteDirect('INSERT INTO parent (id_people,id_parent) VALUES (3,2);');
+  rod.ExecuteDirect('INSERT INTO parent (id_people,id_parent) VALUES (3,1);');
+  rod.ExecuteDirect('INSERT INTO parent (id_people,id_parent) VALUES (5,1);');
+  rod.ExecuteDirect('INSERT INTO parent (id_people,id_parent) VALUES (6,3);');
+  rod.ExecuteDirect('INSERT INTO parent (id_people,id_parent) VALUES (7,3);');
+  rod.ExecuteDirect('INSERT INTO parent (id_people,id_parent) VALUES (6,4);');
+  rod.ExecuteDirect('INSERT INTO parent (id_people,id_parent) VALUES (7,4);');
+  rod.ExecuteDirect('INSERT INTO parent (id_people,id_parent) VALUES (8,6);');
+  rod.ExecuteDirect('INSERT INTO parent (id_people,id_parent) VALUES (9,6);');
+  rod.ExecuteDirect('INSERT INTO parent (id_people,id_parent) VALUES (8,10);');
+  rod.ExecuteDirect('INSERT INTO parent (id_people,id_parent) VALUES (9,10);');
+  rod.ExecuteDirect('INSERT INTO parent (id_people,id_parent) VALUES (11,2);');
+  rod.ExecuteDirect('INSERT INTO parent (id_people,id_parent) VALUES (11,1);');
+  rod.ExecuteDirect('INSERT INTO parent (id_people,id_parent) VALUES (12,11);');
+  rod.Transaction.Commit;
+  {rod.ExecuteDirect('delete from people where id=3;');
+  rod.Transaction.Commit;}
+end;
+
+function Tworkdb.getparametrbase: string;
+var
+  s:string;
+begin
+  {rod.Synchronised:=syncoff; //-можно менять на "лету"
+  rod.Auto_Vacuum:=avacuumoff;
+  rod.Journal_mode:=jmodeoff; //-можно менять на "лету"
+  rod.ForeignKey:=fkeyoff;//-можно менять на "лету" }
+
+  with TSQLQuery.Create(nil) do
+  begin
+    Database := rod;
+    SQL.Text := 'PRAGMA auto_vacuum;';
+    Open;
+    s:='PRAGMA auto_vacuum = ' + fields[0].AsString+lineending;
+    close;
+    SQL.Text := 'PRAGMA journal_mode;';
+    Open;
+    s:=s+'PRAGMA journal_mode = ' + fields[0].AsString+lineending;
+    close;
+    SQL.Text := 'PRAGMA synchronous;';
+    Open;
+     s:=s+'PRAGMA synchronous = ' + fields[0].AsString+lineending;
+    close;
+    SQL.Text := 'PRAGMA foreign_keys;';
+    Open;
+     s:=s+'PRAGMA foreign_keys = ' + fields[0].AsString+lineending;
+    close;
+    SQL.Text := 'PRAGMA page_size;';
+    Open;
+     s:=s+'PRAGMA page_size(bytes) = ' + fields[0].AsString+lineending;
+     close;
+     SQL.Text := 'PRAGMA cache_size;';
+    Open;
+     s:=s+'PRAGMA cache_size(kibibytes) = ' + fields[0].AsString+lineending;
+     close;
+     SQL.Text := 'PRAGMA encoding;';
+    Open;
+     s:=s+'PRAGMA encoding = ' + fields[0].AsString+lineending;
+     close;
+    result:=s;
+    Free;
+  end;
+end;
+
+constructor Tworkdb.Create(pathdb: string);
+var
+  existsdb:boolean;
+begin
+  inherited create;
+  Fpath:=pathdb;
+  //Подключимся к базе или создадим, если не было
+  existsdb:=fileexists(pathdb);
+  connectdb;
+  if not existsdb then
+     //Создадим базовую структуру, если базы ранее не было
+     createstructdb;
+  //Проверим версию, если не совпадает то обновим базу
+   CheckVerAndUpdate;
+end;
+
+destructor Tworkdb.Destroy;
+begin
+  //Fpeople.Free;
+  rod.Close;
+  inherited Destroy;
+end;
+
+function Tworkdb.GetPotomok(const ID_Roditel: integer): boolean;
+var
+  SQL_query:string;
+begin
+  result:=false;
+  //Получим потомков и запишем во временную таблицу
+  SQL_query:='with recursive m(depth,id_people,id_parent) as ('+lineending+
+  'select 1,id_people,id_parent from parent where id_people='+inttostr(ID_Roditel)+lineending+
+  'union all'+lineending+
+  'select m.depth+1, t.id_people, t.id_parent from parent as t join m on (t.id_parent=m.id_people)'+lineending+
+  ')'+lineending+
+  'select m.depth as depth,p.id as pid,p.fam as pfam,p.nam as pnam,p.otch as potch,/*p.sex as psex,*/ p.avatar as pfoto, '+lineending+
+  'p2.id as p2id/*,p2.fam as p2fam,p2.nam as p2nam,p2.otch as p2otch,p2.sex as p2sex*/ from m join people as p on (m.id_people=p.id)'+lineending+
+  'left join people as p2 on (m.id_parent=p2.id)'+lineending+
+  '/*order by depth ASC, p2id*/'+lineending+
+  ''+lineending+
+  '';
+  //pid - id - человека
+  //p2id - id - родителя
+  //Заполним таблицу
+  if FSQL_table<>nil then FSQL_table.Free;
+  FSQL_table:=rod.GetTable(SQL_query);
+end;
+
+function Tworkdb.GetPeople_min(id: integer): TPeople;
+var
+  bookMark:integer;
+  pr:boolean;
+  jpg:TJpegImage;
+  ms:TMemoryStream;
+begin
+  result:=nil;
+  //Если ничего нет, то возвращаем пустоту
+  if RowCount<=0 then exit;
+  //Запомним положение курсора
+  BookMark:=FieldAsInteger['id'];
+  FSQL_table.First;
+  while not FSQL_table.EOF do
+       begin
+         pr:=false;
+         if FieldAsInteger['id']=id then break;
+         pr:=true;
+         FSQL_table.Next;
+       end;
+  if pr then
+   begin
+     result:=nil;
+     exit;
+   end;
+  result:=TPeople.Create;
+  result.fam:=self.FieldAsString['pfam'];
+  result.nam:=self.FieldAsString['pnam'];
+  result.otch:=self.FieldAsString['potch'];
+  result.sex:=self.FieldAsInteger['psex'];  //не надо
+  result.dopinfo:=self.FieldAsString['pdopinfo'];    //не надо
+  if not FieldIsNull['pfoto'] then
+   begin
+     jpg:=TJpegImage.Create;
+     ms:=TMemoryStream.Create;
+     ms:=FieldAsBlob['pfoto'];
+     //ms.Seek(0, soBeginning);
+     jpg.LoadFromStream(ms);
+     result.foto:=jpg;
+     ms.Free;
+   end;
+
+  //вернем курсор на место
+  FSQL_table.First;
+  while not FSQL_table.EOF do
+       begin
+         if FieldAsInteger['id']=BookMark then break;
+         FSQL_table.Next;
+       end;
+end;
+
+end.
+

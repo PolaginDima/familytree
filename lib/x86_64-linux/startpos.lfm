@@ -1,0 +1,176 @@
+object frmstartpos: Tfrmstartpos
+  Left = 459
+  Height = 391
+  Top = 226
+  Width = 894
+  BorderIcons = [biSystemMenu]
+  BorderStyle = bsSingle
+  Caption = 'Выбор дерева'
+  ClientHeight = 372
+  ClientWidth = 894
+  Menu = MainMenu1
+  OnCreate = FormCreate
+  OnShow = FormShow
+  Position = poDesktopCenter
+  LCLVersion = '1.8.4.0'
+  object GroupBox1: TGroupBox
+    Left = 0
+    Height = 89
+    Top = 0
+    Width = 894
+    Align = alTop
+    ClientHeight = 71
+    ClientWidth = 890
+    TabOrder = 0
+    object RadioButton1: TRadioButton
+      Left = 8
+      Height = 17
+      Top = 0
+      Width = 109
+      Caption = 'Дерево потомков'
+      Checked = True
+      OnChange = RadioButton1Change
+      TabOrder = 0
+      TabStop = True
+    end
+    object RadioButton2: TRadioButton
+      Left = 8
+      Height = 17
+      Top = 24
+      Width = 104
+      Caption = 'Дерево предков'
+      OnChange = RadioButton1Change
+      TabOrder = 1
+    end
+    object RadioButton3: TRadioButton
+      Left = 8
+      Height = 17
+      Top = 48
+      Width = 130
+      Caption = 'Начать новое дерево'
+      OnChange = RadioButton1Change
+      TabOrder = 2
+    end
+    object CheckBox1: TCheckBox
+      Left = 216
+      Height = 17
+      Top = 0
+      Width = 93
+      Caption = 'показать всех'
+      OnChange = CheckBox1Change
+      TabOrder = 3
+    end
+  end
+  object StringGridPeople: TStringGrid
+    Left = 0
+    Height = 212
+    Top = 112
+    Width = 894
+    Align = alTop
+    Anchors = [akLeft, akRight, akBottom]
+    Columns = <    
+      item
+        Title.Caption = 'ID'
+        Visible = False
+      end    
+      item
+        Title.Caption = 'Фамилия'
+        Width = 156
+      end    
+      item
+        Title.Caption = 'Имя'
+        Width = 156
+      end    
+      item
+        Title.Caption = 'Отчество'
+        Width = 156
+      end    
+      item
+        Title.Caption = ''
+        Width = 200
+      end>
+    FixedCols = 0
+    Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect, goSmoothScroll]
+    RowCount = 1
+    TabOrder = 1
+    OnDblClick = StringGridPeopleDblClick
+    ColWidths = (
+      0
+      156
+      156
+      156
+      200
+    )
+  end
+  object Edit3: TEdit
+    Left = 700
+    Height = 21
+    Top = -8
+    Width = 156
+    TabOrder = 2
+    Visible = False
+  end
+  object Button1: TButton
+    Left = 402
+    Height = 39
+    Top = 325
+    Width = 90
+    Anchors = [akLeft, akRight, akBottom]
+    Caption = 'Выбрать'
+    Default = True
+    ModalResult = 1
+    OnClick = Button1Click
+    TabOrder = 3
+  end
+  object Panel1: TPanel
+    Left = 0
+    Height = 23
+    Top = 89
+    Width = 894
+    Align = alTop
+    BevelOuter = bvNone
+    ClientHeight = 23
+    ClientWidth = 894
+    TabOrder = 4
+    object Edit1: TEdit
+      Left = 0
+      Height = 23
+      Top = 0
+      Width = 337
+      Align = alLeft
+      OnChange = Edit1Change
+      TabOrder = 0
+    end
+    object Label1: TLabel
+      Left = 337
+      Height = 23
+      Top = 0
+      Width = 25
+      Align = alLeft
+      Alignment = taCenter
+      Caption = '   И   '
+      ParentColor = False
+    end
+    object Edit2: TEdit
+      Left = 362
+      Height = 23
+      Top = 0
+      Width = 337
+      Align = alLeft
+      Enabled = False
+      OnChange = Edit1Change
+      TabOrder = 1
+    end
+  end
+  object MainMenu1: TMainMenu
+    left = 384
+    top = 40
+    object MenuItem1: TMenuItem
+      Caption = 'файл'
+      object MenuItem2: TMenuItem
+        Caption = 'экспорт базы в GEDCOM...'
+        OnClick = MenuItem2Click
+      end
+    end
+  end
+end

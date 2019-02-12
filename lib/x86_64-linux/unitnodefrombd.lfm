@@ -1,0 +1,71 @@
+object frmNodeFromBD: TfrmNodeFromBD
+  Left = 602
+  Height = 296
+  Top = 287
+  Width = 927
+  BorderIcons = [biSystemMenu]
+  BorderStyle = bsDialog
+  Caption = 'Выбор предка'
+  ClientHeight = 296
+  ClientWidth = 927
+  OnCreate = FormCreate
+  Position = poMainFormCenter
+  LCLVersion = '1.8.2.0'
+  object StringGridPeople: TStringGrid
+    Left = 0
+    Height = 248
+    Top = 0
+    Width = 927
+    Align = alTop
+    ColCount = 6
+    Columns = <    
+      item
+        Title.Caption = 'id'
+        Visible = False
+      end    
+      item
+        Title.Caption = 'Фамилия'
+        Width = 200
+      end    
+      item
+        Title.Caption = 'Имя'
+        Width = 196
+      end    
+      item
+        Title.Caption = 'Отчество'
+        Width = 192
+      end    
+      item
+        Title.Caption = ''
+        Width = 64
+      end    
+      item
+        Title.Caption = 'дата рождения'
+        Width = 98
+      end>
+    FixedCols = 0
+    Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goRowSelect, goSmoothScroll]
+    RowCount = 1
+    TabOrder = 0
+    OnDblClick = StringGridPeopleDblClick
+    ColWidths = (
+      0
+      200
+      196
+      192
+      64
+      98
+    )
+  end
+  object Button1: TButton
+    Left = 423
+    Height = 33
+    Top = 256
+    Width = 81
+    Caption = 'Выбрать'
+    Default = True
+    ModalResult = 1
+    OnClick = Button1Click
+    TabOrder = 1
+  end
+end

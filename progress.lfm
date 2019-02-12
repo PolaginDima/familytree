@@ -1,0 +1,25 @@
+object frmprogress: Tfrmprogress
+  Left = 634
+  Height = 57
+  Top = 379
+  Width = 565
+  BorderIcons = []
+  BorderStyle = bsDialog
+  Caption = ' '
+  ClientHeight = 57
+  ClientWidth = 565
+  Position = poScreenCenter
+  LCLVersion = '1.8.2.0'
+  object lblMessage: TLabel
+    Left = 0
+    Height = 57
+    Top = 0
+    Width = 565
+    Align = alClient
+    Alignment = taCenter
+    Font.Height = -17
+    Font.Name = 'Sans'
+    ParentColor = False
+    ParentFont = False
+  end
+end

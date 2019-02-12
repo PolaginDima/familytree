@@ -1,0 +1,52 @@
+object frmviewfoto: Tfrmviewfoto
+  Left = 542
+  Height = 617
+  Top = 197
+  Width = 1144
+  Caption = 'frmviewfoto'
+  ClientHeight = 617
+  ClientWidth = 1144
+  KeyPreview = True
+  OnCreate = FormCreate
+  OnShow = FormShow
+  LCLVersion = '1.8.4.0'
+  object ScrollBox1: TScrollBox
+    Left = 0
+    Height = 617
+    Top = 0
+    Width = 1144
+    HorzScrollBar.Page = 299
+    VertScrollBar.Page = 232
+    Align = alClient
+    ClientHeight = 613
+    ClientWidth = 1140
+    TabOrder = 0
+    object ShapeFoto: TShape
+      Left = 0
+      Height = 232
+      Top = 0
+      Width = 299
+      OnMouseDown = ShapeFotoMouseDown
+      OnMouseMove = ShapeFotoMouseMove
+      OnMouseUp = ShapeFotoMouseUp
+      OnMouseWheelDown = ShapeFotoMouseWheelDown
+      OnMouseWheelUp = ShapeFotoMouseWheelUp
+      OnPaint = ShapeFotoPaint
+    end
+  end
+  object Timer1: TTimer
+    Enabled = False
+    Interval = 500
+    OnTimer = Timer1Timer
+    left = 456
+    top = 112
+  end
+  object PopupMenu1: TPopupMenu
+    left = 568
+    top = 304
+    object MenuItem1: TMenuItem
+      Caption = 'Выделить область'
+      OnClick = MenuItem1Click
+    end
+  end
+end

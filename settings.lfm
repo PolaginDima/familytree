@@ -1,0 +1,329 @@
+object frmSettings: TfrmSettings
+  Left = 638
+  Height = 379
+  Top = 266
+  Width = 332
+  BorderIcons = [biSystemMenu]
+  BorderStyle = bsDialog
+  Caption = 'Настройки'
+  ClientHeight = 379
+  ClientWidth = 332
+  OnShow = FormShow
+  Position = poMainFormCenter
+  LCLVersion = '1.8.4.0'
+  object Button1: TButton
+    Left = 400
+    Height = 14
+    Top = 27
+    Width = 42
+    Cancel = True
+    Caption = 'Button1'
+    ModalResult = 2
+    TabOrder = 0
+  end
+  object CheckBox2: TCheckBox
+    Left = 8
+    Height = 17
+    Top = 8
+    Width = 184
+    Caption = 'подсвечивать прямых потомков'
+    OnChange = CheckBox2Change
+    TabOrder = 1
+  end
+  object CheckBox3: TCheckBox
+    Left = 8
+    Height = 17
+    Top = 41
+    Width = 179
+    Caption = 'подсвечивать прямых предков'
+    OnChange = CheckBox3Change
+    TabOrder = 2
+  end
+  object UpDown1: TUpDown
+    Left = 264
+    Height = 21
+    Top = 8
+    Width = 16
+    Associate = MaskEdit1
+    Max = 9
+    Min = 1
+    Position = 1
+    TabOrder = 3
+    Wrap = False
+  end
+  object MaskEdit1: TMaskEdit
+    Left = 245
+    Height = 21
+    Top = 8
+    Width = 19
+    CharCase = ecNormal
+    MaxLength = 1
+    TabOrder = 4
+    OnChange = MaskEdit1Change
+    EditMask = '#;0;_'
+    Text = '1'
+    SpaceChar = '_'
+  end
+  object MaskEdit2: TMaskEdit
+    Left = 245
+    Height = 21
+    Top = 41
+    Width = 19
+    CharCase = ecNormal
+    MaxLength = 1
+    TabOrder = 5
+    OnChange = MaskEdit2Change
+    EditMask = '#;0;_'
+    Text = '1'
+    SpaceChar = '_'
+  end
+  object UpDown2: TUpDown
+    Left = 264
+    Height = 21
+    Top = 41
+    Width = 16
+    Associate = MaskEdit2
+    Max = 9
+    Min = 1
+    Position = 1
+    TabOrder = 6
+    Wrap = False
+  end
+  object CheckBox4: TCheckBox
+    Left = 8
+    Height = 17
+    Top = 74
+    Width = 157
+    Caption = 'показывать дни рождения'
+    OnChange = CheckBox4Change
+    TabOrder = 7
+  end
+  object CheckBox5: TCheckBox
+    Left = 8
+    Height = 17
+    Top = 107
+    Width = 204
+    Caption = 'предупреждать о дне рождения за '
+    Enabled = False
+    OnChange = CheckBox5Change
+    TabOrder = 8
+  end
+  object MaskEdit3: TMaskEdit
+    Left = 245
+    Height = 21
+    Top = 107
+    Width = 19
+    CharCase = ecNormal
+    Enabled = False
+    MaxLength = 1
+    TabOrder = 9
+    OnChange = MaskEdit3Change
+    EditMask = '#;0;_'
+    Text = '9'
+    SpaceChar = '_'
+  end
+  object UpDown3: TUpDown
+    Left = 264
+    Height = 21
+    Top = 107
+    Width = 16
+    Associate = MaskEdit3
+    Enabled = False
+    Max = 9
+    Min = 1
+    Position = 9
+    TabOrder = 10
+    Wrap = False
+  end
+  object Label1: TLabel
+    Left = 287
+    Height = 13
+    Top = 111
+    Width = 25
+    Caption = 'дней'
+    ParentColor = False
+  end
+  object Label2: TLabel
+    Left = 8
+    Height = 13
+    Top = 140
+    Width = 109
+    Caption = 'цвет окна программы'
+    ParentColor = False
+  end
+  object Shape_color_frm: TShape
+    Left = 245
+    Height = 16
+    Top = 140
+    Width = 33
+    OnMouseUp = Shape_color_frmMouseUp
+  end
+  object Label3: TLabel
+    Left = 8
+    Height = 13
+    Top = 169
+    Width = 179
+    Caption = 'цвет подсветки потомков/предков'
+    ParentColor = False
+  end
+  object Shape_color_ligth_Edge: TShape
+    Left = 245
+    Height = 16
+    Top = 169
+    Width = 33
+    OnMouseUp = Shape_color_frmMouseUp
+  end
+  object Label4: TLabel
+    Left = 8
+    Height = 13
+    Top = 198
+    Width = 97
+    Caption = 'цвет веток дерева'
+    ParentColor = False
+  end
+  object Shape_color_Edge: TShape
+    Left = 245
+    Height = 16
+    Top = 198
+    Width = 33
+    OnMouseUp = Shape_color_frmMouseUp
+  end
+  object Button2: TButton
+    Left = 280
+    Height = 16
+    Top = 140
+    Width = 52
+    Caption = 'сбросить'
+    OnClick = Button2Click
+    TabOrder = 11
+  end
+  object Button3: TButton
+    Left = 280
+    Height = 16
+    Top = 169
+    Width = 52
+    Caption = 'сбросить'
+    OnClick = Button3Click
+    TabOrder = 12
+  end
+  object Button4: TButton
+    Left = 280
+    Height = 16
+    Top = 198
+    Width = 52
+    Caption = 'сбросить'
+    OnClick = Button4Click
+    TabOrder = 13
+  end
+  object Label5: TLabel
+    Left = 8
+    Height = 13
+    Top = 227
+    Width = 53
+    Caption = 'цвет фона'
+    ParentColor = False
+  end
+  object Shape_color_BackGround: TShape
+    Left = 245
+    Height = 16
+    Hint = 'после перезагрузки'
+    Top = 227
+    Width = 33
+    ParentShowHint = False
+    OnMouseUp = Shape_color_frmMouseUp
+    ShowHint = True
+  end
+  object Button5: TButton
+    Left = 280
+    Height = 16
+    Hint = 'после перезагрузки'
+    Top = 227
+    Width = 52
+    Caption = 'сбросить'
+    OnClick = Button5Click
+    ParentShowHint = False
+    ShowHint = True
+    TabOrder = 14
+  end
+  object Label6: TLabel
+    Left = 8
+    Height = 13
+    Top = 256
+    Width = 171
+    Caption = 'цвет фона листа без фотографии'
+    ParentColor = False
+  end
+  object Shape_color_Foto: TShape
+    Left = 245
+    Height = 16
+    Top = 256
+    Width = 33
+    OnMouseUp = Shape_color_frmMouseUp
+  end
+  object Button6: TButton
+    Left = 280
+    Height = 16
+    Top = 256
+    Width = 52
+    Caption = 'сбросить'
+    OnClick = Button6Click
+    TabOrder = 15
+  end
+  object Label7: TLabel
+    Left = 8
+    Height = 13
+    Top = 284
+    Width = 175
+    Caption = 'цвет рамки листа без фотографии'
+    ParentColor = False
+  end
+  object Shape_color_Bevel_Foto: TShape
+    Left = 245
+    Height = 16
+    Top = 284
+    Width = 33
+    OnMouseUp = Shape_color_frmMouseUp
+  end
+  object Button7: TButton
+    Left = 280
+    Height = 16
+    Top = 284
+    Width = 52
+    Caption = 'сбросить'
+    OnClick = Button7Click
+    TabOrder = 16
+  end
+  object Label8: TLabel
+    Left = 8
+    Height = 13
+    Top = 315
+    Width = 128
+    Caption = 'цвет подписей у листьев'
+    ParentColor = False
+  end
+  object Shape_color_Caption_Node: TShape
+    Left = 245
+    Height = 16
+    Top = 312
+    Width = 33
+    OnMouseUp = Shape_color_frmMouseUp
+  end
+  object Button8: TButton
+    Left = 280
+    Height = 16
+    Top = 312
+    Width = 52
+    Caption = 'сбросить'
+    OnClick = Button8Click
+    TabOrder = 17
+  end
+  object CheckBox6: TCheckBox
+    Left = 8
+    Height = 17
+    Top = 344
+    Width = 115
+    Caption = '"красивое" дерево'
+    OnChange = CheckBox6Change
+    TabOrder = 18
+  end
+end

@@ -1,0 +1,130 @@
+unit Unit1;
+
+{$mode objfpc}{$H+}
+
+interface
+
+uses
+  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
+  ExtCtrls, Grids, Menus, CreateTree, sqldb, mysqlite3conn, myLvlGraphTree;
+
+type
+
+  { TForm1 }
+
+
+  TForm1 = class(TForm)
+    Button1: TButton;
+    Button2: TButton;
+    Button3: TButton;
+    Button4: TButton;
+    Button5: TButton;
+    MenuItem1: TMenuItem;
+    MenuItem2: TMenuItem;
+    MenuItem4: TMenuItem;
+    MenuItem5: TMenuItem;
+    MenuItem6: TMenuItem;
+    MenuItem7: TMenuItem;
+    MenuItem8: TMenuItem;
+    Panel1: TPanel;
+    PopupMenu1: TPopupMenu;
+    PopupMenu2: TPopupMenu;
+    procedure Button2Click(Sender: TObject);
+    procedure Button3Click(Sender: TObject);
+    procedure Button5Click(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure MenuItem2Click(Sender: TObject);
+    procedure MenuItem8Click(Sender: TObject);
+  private
+    { private declarations }
+    rod:tworkdb;
+    lvl:Tmytree;
+    rodTree:TCreateTree;
+    pathdb:string;
+    SQLite3Conn: TSQLite3Connection;
+  public
+    { public declarations }
+  end;
+
+var
+  Form1: TForm1;
+
+implementation
+
+{$R *.lfm}
+
+{ TForm1 }
+
+procedure TForm1.Button2Click(Sender: TObject);
+begin
+  pathdb:=ExtractFilePath(Application.ExeName)+directoryseparator+'rod.db3';
+  if fileexists(pathdb) then
+  try
+    if not deletefile(pathdb) then
+    MessageDlg('Ошибка','не удалось удалить файл'+lineending+pathdb,mtError,[mbOK],0);
+  except
+    on E: Exception do
+      begin
+           MessageDlg('Ошибка','не удалось удалить файл'+lineending+pathdb+lineending+e.Message,mtError,[mbOK],0)   ;
+      end;
+  end;
+  sleep(500);
+  rod:=tworkdb.Create(pathdb);
+  showmessage(rod.getparametrbase);
+  rod.Free;
+end;
+
+procedure TForm1.Button3Click(Sender: TObject);
+var bmp:TBitmap;
+begin
+  pathdb:=ExtractFilePath(Application.ExeName)+directoryseparator+'rod.db3';
+  rodtree:=TCreateTree.Create(pathdb,self,self.PopupMenu1,self.PopupMenu2);
+  rodTree.Parent:=self;
+  rodTree.Align:=alClient;
+  rodtree.AutoSize:=true;
+  rodtree.CaptionTree:='Древо жизни';
+  rodtree.DrawTree;
+end;
+
+procedure TForm1.Button5Click(Sender: TObject);
+//var
+  //lvl:Tmytree;
+begin
+  lvl:=Tmytree.Create;
+  lvl.Caption:='Древо жизни';
+  lvl.addNode(1);
+  lvl.addNode(3);
+  lvl.addEdge(4,3);
+  lvl.addEdge(4,2);
+  lvl.addEdge(2,1);
+  lvl.addEdge(1,3);
+  lvl.addEdge(1,5);
+  lvl.NodesIDNode[1].Caption:='1';
+  lvl.NodesIDNode[1].Caption:='1';
+  lvl.NodesIDNode[2].Caption:='2';
+  lvl.NodesIDNode[3].Caption:='3';
+  lvl.NodesIDNode[4].Caption:='4';
+  lvl.NodesIDNode[5].Caption:='5';
+  lvl.DrawTree;
+/////  self.Image1.Picture.Bitmap.Assign(lvl);
+  //lvl.Canvas.Line(0,0,300,300);
+  //self.Image1.Stretch:=true;
+end;
+
+procedure TForm1.FormCreate(Sender: TObject);
+begin
+
+end;
+
+procedure TForm1.MenuItem2Click(Sender: TObject);
+begin
+
+end;
+
+procedure TForm1.MenuItem8Click(Sender: TObject);
+begin
+  //showmessage()
+end;
+
+end.
+
